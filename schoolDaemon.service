@@ -1,0 +1,12 @@
+[Unit]
+Description=School Daemon Service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+User=root
+ExecStart=/opt/schoolDaemon/schoolDaemon.py
+
+[Install]
+WantedBy=multi-user.target
