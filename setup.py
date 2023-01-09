@@ -10,6 +10,8 @@ def install():
     system("chown -R root:root /opt/schoolDaemon")
     system("chmod -R 770 /opt/schoolDaemon")
     system("mkdir /etc/schoolDaemon")
+    copy2("./public.pem", "/etc/schoolDaemon/public.pem")
+    system("chmod -R 770 /etc/schoolDaemon")
     copy2("./schoolDaemon.service", "/etc/systemd/system")
     system("chown root:root /etc/systemd/system/schoolDaemon.service")
     system("chmod 644 /etc/systemd/system/schoolDaemon.service")
