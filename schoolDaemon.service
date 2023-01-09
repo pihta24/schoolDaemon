@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 Restart=always
 User=root
-ExecStart=/opt/schoolDaemon/schoolDaemon.py
+ExecStart=/opt/schoolDaemon/main.py
 
 [Install]
 WantedBy=multi-user.target

@@ -5,13 +5,13 @@ from os import system
 
 
 def install():
-    system("apt install -y python3-daemon")
+    system("apt install -y python3-pycryptodome")
     copytree("./src", "/opt/schoolDaemon")
     system("chown -R root:root /opt/schoolDaemon")
     system("chmod -R 770 /opt/schoolDaemon")
     system("mkdir /etc/schoolDaemon")
     copy2("./schoolDaemon.service", "/etc/systemd/system")
-    system("choown root:root /etc/systemd/system/schoolDaemon.service")
+    system("chown root:root /etc/systemd/system/schoolDaemon.service")
     system("chmod 644 /etc/systemd/system/schoolDaemon.service")
     system("systemctl daemon-reload")
     system("systemctl enable schoolDaemon.service")
@@ -43,13 +43,18 @@ def main():
     print("2. Uninstall")
     print("3. Update")
     print("4. Exit")
-    while choice := input("Your choice: ") != "4":
+    while choice := input("Your choice: "):
+        if choice == "4":
+            break
         if choice == "1":
             install()
+            break
         elif choice == "2":
             uninstall()
+            break
         elif choice == "3":
             update()
+            break
         else:
             print("Invalid choice!")
             print("Please choose what you want to do:")
