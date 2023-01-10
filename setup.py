@@ -6,7 +6,7 @@ from sys import argv
 
 
 def install():
-    system("apt install -y python3-pycryptodome")
+    system("pip install pycryptodome")
     copytree("./src", "/opt/schoolDaemon")
     system("chown -R root:root /opt/schoolDaemon")
     system("chmod -R 770 /opt/schoolDaemon")

@@ -3,6 +3,7 @@ Description=School Daemon Service
 After=network.target
 
 [Service]
+WorkingDirectory=/opt/schoolDaemon
 Type=simple
 Restart=always
 User=root

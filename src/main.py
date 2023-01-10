@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import socket
+from typing import Optional
+
 # noinspection PyPackageRequirements
 from Crypto.PublicKey import RSA
 # noinspection PyPackageRequirements
@@ -26,7 +28,7 @@ def check_hostname(host: str) -> bool:
     return host in machine_host
 
 
-def exec_script(data: bytes) -> bytes | None:
+def exec_script(data: bytes) -> Optional[bytes]:
     host = data[:16].rstrip(b"q")
     command = data[16:19]
     other_data = data[19:]
