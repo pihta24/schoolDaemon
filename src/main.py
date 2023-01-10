@@ -7,7 +7,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 # noinspection PyPackageRequirements
 from Crypto.Signature import pss
+from os import popen, system
 from time import time
+from scripts.exec import commands
 
 
 # key_path = "/etc/schoolDaemon/public.pem"
@@ -19,12 +21,30 @@ with open(key_path, "r") as f:
     verifier = pss.new(key)
 
 
+def check_hostname(host: str) -> bool:
+    machine_host = popen("hostname").read()
+    return host in machine_host
+
+
+def exec_script(data: bytes) -> bytes | None:
+    host = data[:16].rstrip(b"q")
+    command = data[16:19]
+    other_data = data[19:]
+
+    if not check_hostname(host.decode()):
+        return
+
+    system(commands[command])
+    return b"ok"
+
+
 def main():
     last_id = None
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 55555))
     while True:
         data, addr = s.recvfrom(1024)
+        print(data)
         
         rand_id = data[:16]
         if last_id == rand_id:
@@ -48,8 +68,9 @@ def main():
         
         data = data[5:]
         
-        print(data, addr)
-        s.sendto(data, addr)
+        result = exec_script(data)
+        if result:
+            s.sendto(result, addr)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from shutil import copytree, copy2
 from os import system
+from sys import argv
 
 
 def install():
@@ -45,6 +46,14 @@ def main():
     print("2. Uninstall")
     print("3. Update")
     print("4. Exit")
+    if len(argv) >= 2:
+        if argv[1] == "1":
+            install()
+        if argv[1] == "2":
+            uninstall()
+        if argv[1] == "3":
+            update()
+        return
     while choice := input("Your choice: "):
         if choice == "4":
             break
