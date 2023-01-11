@@ -6,6 +6,7 @@ from sys import argv
 
 
 def install():
+    system("apt-get install xinput")
     system("pip install pycryptodome")
     copytree("./src", "/opt/schoolDaemon")
     system("chown -R root:root /opt/schoolDaemon")
