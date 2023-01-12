@@ -8,6 +8,7 @@ Type=simple
 Restart=always
 User=root
 ExecStart=/opt/schoolDaemon/main.py
+ExecStartPre=/usr/bin/python3 /root/schoolDaemon/setup.py 4
 
 [Install]
 WantedBy=multi-user.target
