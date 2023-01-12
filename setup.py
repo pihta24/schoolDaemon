@@ -31,19 +31,16 @@ def uninstall():
     system("systemctl stop schoolDaemon.service")
     system("systemctl disable schoolDaemon.service")
     system("rm -rf /opt/schoolDaemon")
+    system("rm -rf /etc/schoolDaemon")
+    system("rm -rf /opt/schUpdater")
     system("rm /etc/systemd/system/schoolDaemon.service")
     system("systemctl daemon-reload")
-    system("rm -rf /etc/schoolDaemon")
 
 
-def update(auto=False):
-    if auto:
-        base_path = "/root/schoolDaemon"
-    else:
-        base_path = "."
+def update():
     system("systemctl stop schoolDaemon.service")
     system("rm -rf /opt/schoolDaemon")
-    copytree(f"{base_path}/src", "/opt/schoolDaemon")
+    copytree("./src", "/opt/schoolDaemon")
     system("chown -R root:root /opt/schoolDaemon")
     system("chmod -R 770 /opt/schoolDaemon")
     system("systemctl start schoolDaemon.service")

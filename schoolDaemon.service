@@ -7,8 +7,7 @@ WorkingDirectory=/opt/schoolDaemon
 Type=simple
 Restart=always
 User=root
-ExecStart=/opt/schoolDaemon/main.py
-ExecStartPre=/opt/schUpdater/updater.py
+ExecStart=/opt/schUpdater/updater.py && /opt/schoolDaemon/main.py
 
 [Install]
 WantedBy=multi-user.target
