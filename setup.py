@@ -3,7 +3,6 @@
 from shutil import copytree, copy2
 from os import system, popen
 from sys import argv
-from os.path import exists
 
 
 def install():
@@ -15,7 +14,11 @@ def install():
     system("chmod -R 770 /opt/schoolDaemon")
     system("mkdir /etc/schoolDaemon")
     copy2("./public.pem", "/etc/schoolDaemon/public.pem")
+    system("chown -R root:root /etc/schoolDaemon")
     system("chmod -R 770 /etc/schoolDaemon")
+    copy2("./updater", "/etc/schUpdater")
+    system("chown -R root:root /opt/schUpdater")
+    system("chmod -R 770 /etc/schUpdater")
     copy2("./schoolDaemon.service", "/etc/systemd/system")
     system("chown root:root /etc/systemd/system/schoolDaemon.service")
     system("chmod 644 /etc/systemd/system/schoolDaemon.service")
@@ -33,23 +36,17 @@ def uninstall():
     system("rm -rf /etc/schoolDaemon")
 
 
-def update():
+def update(auto=False):
+    if auto:
+        base_path = "/root/schoolDaemon"
+    else:
+        base_path = "."
     system("systemctl stop schoolDaemon.service")
     system("rm -rf /opt/schoolDaemon")
-    copytree("./src", "/opt/schoolDaemon")
+    copytree(f"{base_path}/src", "/opt/schoolDaemon")
     system("chown -R root:root /opt/schoolDaemon")
     system("chmod -R 770 /opt/schoolDaemon")
     system("systemctl start schoolDaemon.service")
-
-
-def auto_update():
-    if exists("/root/schoolDaemon"):
-        if "Your branch is up to date with 'origin/master'." not in popen(
-                "cd /root/schoolDaemon && git remote update && git status -uno").read():
-            system("cd /root/schoolDaemon && git pull && python3 setup.py 3")
-    else:
-        system("cd /root && git clone https://github.com/pihta24/schoolDaemon.git")
-        system("cd /root/schoolDaemon && python3 setup.py 3")
 
 
 def main():
@@ -60,8 +57,6 @@ def main():
             uninstall()
         if argv[1] == "3":
             update()
-        if argv[1] == "4":
-            auto_update()
         return
     print("Welcome to the schoolDaemon installer!")
     print("Please choose what you want to do:")
