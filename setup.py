@@ -46,6 +46,13 @@ def update():
     system("systemctl start schoolDaemon.service")
 
 
+def update_without_restart():
+    system("rm -rf /opt/schoolDaemon")
+    copytree("./src", "/opt/schoolDaemon")
+    system("chown -R root:root /opt/schoolDaemon")
+    system("chmod -R 770 /opt/schoolDaemon")
+
+
 def main():
     if len(argv) >= 2:
         if argv[1] == "1":
@@ -54,6 +61,8 @@ def main():
             uninstall()
         if argv[1] == "3":
             update()
+        if argv[1] == "4":
+            update_without_restart()
         return
     print("Welcome to the schoolDaemon installer!")
     print("Please choose what you want to do:")
