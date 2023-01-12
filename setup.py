@@ -44,7 +44,8 @@ def update():
 
 def auto_update():
     if exists("/root/schoolDaemon"):
-        if "Your branch is up to date with 'origin/master'." not in popen("cd /root/schoolDaemon && git status -uno").read():
+        if "Your branch is up to date with 'origin/master'." not in popen(
+                "cd /root/schoolDaemon && git remote update && git status -uno").read():
             system("cd /root/schoolDaemon && git pull && python3 setup.py 3")
     else:
         system("cd /root && git clone https://github.com/pihta24/schoolDaemon.git")
