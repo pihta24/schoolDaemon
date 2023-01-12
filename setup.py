@@ -41,12 +41,6 @@ def update():
 
 
 def main():
-    print("Welcome to the schoolDaemon installer!")
-    print("Please choose what you want to do:")
-    print("1. Install")
-    print("2. Uninstall")
-    print("3. Update")
-    print("4. Exit")
     if len(argv) >= 2:
         if argv[1] == "1":
             install()
@@ -55,6 +49,12 @@ def main():
         if argv[1] == "3":
             update()
         return
+    print("Welcome to the schoolDaemon installer!")
+    print("Please choose what you want to do:")
+    print("1. Install")
+    print("2. Uninstall")
+    print("3. Update")
+    print("4. Exit")
     while choice := input("Your choice: "):
         if choice == "4":
             break
