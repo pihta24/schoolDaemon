@@ -1,0 +1,1 @@
+@reboot root /opt/schUpdater/updater.py

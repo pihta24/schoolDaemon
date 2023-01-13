@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from shutil import copytree, copy2
-from os import system, popen
+from os import system
 from sys import argv
 
 
@@ -19,6 +19,10 @@ def install():
     copytree("./updater", "/opt/schUpdater")
     system("chown -R root:root /opt/schUpdater")
     system("chmod -R 770 /opt/schUpdater")
+    copy2("./cron", "/etc/cron.d/schoolDaemon")
+    system("chown root:root /etc/cron.d/schoolDaemon")
+    system("chmod 770 /etc/cron.d/schoolDaemon")
+    system("service cron reload")
     copy2("./schoolDaemon.service", "/etc/systemd/system")
     system("chown root:root /etc/systemd/system/schoolDaemon.service")
     system("chmod 644 /etc/systemd/system/schoolDaemon.service")
@@ -30,6 +34,8 @@ def install():
 def uninstall():
     system("systemctl stop schoolDaemon.service")
     system("systemctl disable schoolDaemon.service")
+    system("rm /ect/cron.d/schoolDaemon")
+    system("service cron reload")
     system("rm -rf /opt/schoolDaemon")
     system("rm -rf /etc/schoolDaemon")
     system("rm -rf /opt/schUpdater")
@@ -46,13 +52,6 @@ def update():
     system("systemctl start schoolDaemon.service")
 
 
-def update_without_restart():
-    system("rm -rf /opt/schoolDaemon")
-    copytree("./src", "/opt/schoolDaemon")
-    system("chown -R root:root /opt/schoolDaemon")
-    system("chmod -R 770 /opt/schoolDaemon")
-
-
 def main():
     if len(argv) >= 2:
         if argv[1] == "1":
@@ -61,8 +60,6 @@ def main():
             uninstall()
         if argv[1] == "3":
             update()
-        if argv[1] == "4":
-            update_without_restart()
         return
     print("Welcome to the schoolDaemon installer!")
     print("Please choose what you want to do:")
