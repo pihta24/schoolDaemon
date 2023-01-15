@@ -17,6 +17,8 @@ from Crypto.Signature import pss
 
 from scripts.exec import commands
 
+# TODO: Make async, add wallpaper support
+
 key_path = "/etc/schoolDaemon/public.pem"
 # key_path = "../public.pem"
 

@@ -14,6 +14,7 @@ def install():
     system("chmod -R 770 /opt/schoolDaemon")
     system("mkdir /etc/schoolDaemon")
     copy2("./public.pem", "/etc/schoolDaemon/public.pem")
+    copy2("./config.json", "/etc/schoolDaemon/config.json")
     system("chown -R root:root /etc/schoolDaemon")
     system("chmod -R 770 /etc/schoolDaemon")
     copytree("./updater", "/opt/schUpdater")
