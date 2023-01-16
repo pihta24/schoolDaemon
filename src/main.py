@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import socket
+import asyncio
 import logging
+import signal
 import sys
+from json import load, dump
 from logging.handlers import RotatingFileHandler
-from os import popen, system
+from os import popen, system, environ
+from os.path import exists
 from time import time
 from typing import Optional
 
@@ -17,16 +20,16 @@ from Crypto.Signature import pss
 
 from scripts.exec import commands
 
-# TODO: Make async, add wallpaper support
+if "DEBUG" not in environ.keys():
+    key_path = "/etc/schoolDaemon/public.pem"
+    config_path = "/etc/schoolDaemon/config.json"
+    log_path = "/var/log/schoolDaemon.log"
+else:
+    key_path = "../public.pem"
+    config_path = "../config.json"
+    log_path = "../schoolDaemon.log"
 
-key_path = "/etc/schoolDaemon/public.pem"
-# key_path = "../public.pem"
-
-with open(key_path, "r") as f:
-    key = RSA.import_key(f.read())
-    verifier = pss.new(key)
-
-rfh = RotatingFileHandler("./schoolDaemon.log", maxBytes=1024 * 1024 * 10, backupCount=5)
+rfh = RotatingFileHandler(log_path, maxBytes=1024 * 1024 * 10, backupCount=5)
 rfh.setLevel(logging.DEBUG)
 
 sh = logging.StreamHandler()
@@ -39,6 +42,18 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("main")
+loop = asyncio.new_event_loop()
+
+with open(key_path, "r") as f:
+    key = RSA.import_key(f.read())
+    verifier = pss.new(key)
+
+if not exists(config_path):
+    with open(config_path, "w") as f:
+        dump({"wallpaper": "", "wallpaper_enable": False}, f)
+
+with open(config_path, "r") as f:
+    config = load(f)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -52,16 +67,40 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception
 
 
+# noinspection PyShadowingNames
 def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
     host = data[:16].rstrip(b"q")
     command = data[16:19]
-    other_data = data[19:]
+    other_data = data[19:].decode("utf-8")
     
     logger.debug(f"Command: {command} for {host} with data {other_data}")
     
     if host.decode() not in machine_host:
         logger.info(f"Received command for {host}, but this is {machine_host}, ignoring")
         return
+    
+    if command == b"wae":
+        if not config.get("wallpaper", "") and not exists(other_data):
+            return
+        if exists(other_data):
+            config["wallpaper"] = other_data
+        config["wallpaper_enable"] = True
+        with open(config_path, "w") as f:
+            dump(config, f)
+        if "wallpaper" in tasks.keys():
+            tasks["wallpaper"].cancel()
+        else:
+            from wallpaper_helper import main as wallpaper_helper
+            tasks["wallpaper"] = loop.create_task(rerun_on_cacelled(wallpaper_helper, config))
+        return b"OK"
+    elif command == b"wad":
+        config["wallpaper_enable"] = False
+        with open(config_path, "w") as f:
+            dump(config, f)
+        if "wallpaper" in tasks.keys():
+            tasks["wallpaper"].cancel()
+            del tasks["wallpaper"]
+        return b"OK"
     
     if command not in commands.keys():
         logger.warning(f"Unknown command {command}, ignoring")
@@ -71,58 +110,124 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
     logger.debug(f"Executing shell command {shell_command}")
     
     if shell_command.endswith(" "):
-        shell_command += other_data.decode()
+        shell_command += other_data
     system(shell_command)
     return b"ok"
 
 
-def main():
-    logger.info("Starting schoolDaemon")
-    machine_host = popen("hostname").read()
-    last_id = None
+class UDPServer(asyncio.DatagramProtocol):
+    def __init__(self):
+        self.transport = None
+        self.machine_host = popen("hostname").read()
+        self.last_id = None
     
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    logger.debug("Binding to port 55555")
-    s.bind(('', 55555))
+    def __call__(self, *args, **kwargs):
+        return self
     
-    logger.debug("Starting main loop")
-    while True:
-        data, addr = s.recvfrom(1024)
-        
+    def connection_made(self, transport: asyncio.DatagramTransport):
+        self.transport = transport
+    
+    def datagram_received(self, data: bytes, addr: tuple):
         logger.info(f"Received data from {addr}")
-        
-        rand_id = data[:16]
-        if last_id == rand_id:
-            logger.info("Duplicate message, ignoring")
-            continue
-        last_id = rand_id
-        data = data[16:]
-        
-        if len(data) <= 128:
-            logger.warning("Received data is too short")
-            continue
-        
-        calculated_hash = SHA256.new(data[128:])
         try:
-            verifier.verify(calculated_hash, data[:128])
-        except (ValueError, TypeError):
-            logger.warning("Received data is not signed correctly")
-            continue
+            rand_id = data[:16]
+            if self.last_id == rand_id:
+                logger.info("Duplicate message, ignoring")
+                return
+            self.last_id = rand_id
+            data = data[16:]
         
-        data = data[128:]
+            if len(data) <= 128:
+                logger.warning("Received data is too short")
+                return
         
-        if time() - int.from_bytes(data[:5], "big") > 5:
-            logger.warning("Received data is too old")
-            continue
+            calculated_hash = SHA256.new(data[128:])
+            try:
+                verifier.verify(calculated_hash, data[:128])
+            except (ValueError, TypeError):
+                logger.warning("Received data is not signed correctly")
+                return
         
-        data = data[5:]
+            data = data[128:]
         
-        logger.debug("Executing command")
-        result = exec_script(data, machine_host)
-        if result:
-            logger.debug(f"Result: {result}")
-            s.sendto(result, addr)
+            if time() - int.from_bytes(data[:5], "big") > 5:
+                logger.warning("Received data is too old")
+                return
+        
+            data = data[5:]
+        
+            logger.debug("Executing command")
+            result = exec_script(data, self.machine_host)
+            if result:
+                logger.debug(f"Result: {result}")
+                # self.transport.sendto(result, addr)
+        except Exception:
+            logger.exception("Error while handling data")
+
+
+tasks = dict()
+running = True
+
+
+def terminate(_: int, __):
+    global running
+    running = False
+    for task in tasks.values():
+        task.cancel()
+    loop.stop()
+    logger.info("SchoolDaemon stopped")
+
+
+async def rerun_on_cacelled(coro, *args, **kwargs):
+    while True:
+        try:
+            await coro(*args, **kwargs)
+        except asyncio.CancelledError:
+            if not running:
+                break
+            await asyncio.sleep(1)
+
+
+async def main():
+    global tasks, running
+    
+    _ = await loop.create_datagram_endpoint(
+        UDPServer(),
+        local_addr=("0.0.0.0", 55555)
+    )
+    
+    if config.get("wallpaper_enable", False) and "DEBUG" not in environ.keys():
+        from wallpaper_helper import main as wallpaper_helper
+        tasks["wallpaper"] = loop.create_task(rerun_on_cacelled(wallpaper_helper, config))
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        signal.signal(signal.SIGTERM, terminate)
+    except AttributeError:
+        pass
+    
+    try:
+        signal.signal(signal.SIGINT, terminate)
+    except AttributeError:
+        pass
+    
+    try:
+        signal.signal(signal.SIGQUIT, terminate)
+    except AttributeError:
+        pass
+    
+    try:
+        signal.signal(signal.SIGHUP, terminate)
+    except AttributeError:
+        pass
+
+    asyncio.set_event_loop(loop)
+    
+    try:
+        loop.run_until_complete(main())
+        loop.run_forever()
+    except RuntimeError:
+        pass
+    
+    loop.close()
