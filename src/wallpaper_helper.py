@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from os import system
-from os.path import getmtime
+from os.path import getmtime, exists
 
 logger = logging.getLogger("wallpaper-helper")
 
@@ -12,6 +12,10 @@ async def main(config):
         if getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc") != modified:
             modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
             if "wallpaper" not in config.keys():
+                continue
+            if not config["wallpaper_enabled"]:
+                continue
+            if not exists(config["wallpaper"]):
                 continue
             with open("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc", "r") as f:
                 data = f.read()

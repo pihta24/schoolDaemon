@@ -50,7 +50,7 @@ with open(key_path, "r") as f:
 
 if not exists(config_path):
     with open(config_path, "w") as f:
-        dump({"wallpaper": "", "wallpaper_enable": False}, f)
+        dump({"wallpaper": "", "wallpaper_enabled": False}, f)
 
 with open(config_path, "r") as f:
     config = load(f)
@@ -84,7 +84,7 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             return
         if exists(other_data):
             config["wallpaper"] = other_data
-        config["wallpaper_enable"] = True
+        config["wallpaper_enabled"] = True
         with open(config_path, "w") as f:
             dump(config, f)
         if "wallpaper" in tasks.keys():
@@ -94,7 +94,7 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             tasks["wallpaper"] = loop.create_task(rerun_on_cacelled(wallpaper_helper, config))
         return b"OK"
     elif command == b"wad":
-        config["wallpaper_enable"] = False
+        config["wallpaper_enabled"] = False
         with open(config_path, "w") as f:
             dump(config, f)
         if "wallpaper" in tasks.keys():
@@ -196,7 +196,7 @@ async def main():
         local_addr=("0.0.0.0", 55555)
     )
     
-    if config.get("wallpaper_enable", False) and "DEBUG" not in environ.keys():
+    if config.get("wallpaper_enabled", False) and "DEBUG" not in environ.keys():
         from wallpaper_helper import main as wallpaper_helper
         tasks["wallpaper"] = loop.create_task(rerun_on_cacelled(wallpaper_helper, config))
 
