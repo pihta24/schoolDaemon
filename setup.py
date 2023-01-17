@@ -35,7 +35,7 @@ def install():
 def uninstall():
     system("systemctl stop schoolDaemon.service")
     system("systemctl disable schoolDaemon.service")
-    system("rm /ect/cron.d/schoolDaemon")
+    system("rm /etc/cron.d/schoolDaemon")
     system("service crond reload")
     system("rm -rf /opt/schoolDaemon")
     system("rm -rf /etc/schoolDaemon")
