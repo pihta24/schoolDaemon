@@ -8,6 +8,7 @@ logger = logging.getLogger("wallpaper-helper")
 
 async def main(config):
     modified = None
+    logger.info("Starting wallpaper daemon")
     while True:
         if getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc") != modified:
             modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
@@ -19,8 +20,8 @@ async def main(config):
                 continue
             with open("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc", "r") as f:
                 data = f.read()
-                if config["wallpaper"] not in data:
-                    logger.info("Wallpaper not set, setting it")
-                    system(
-                        f"su - student -c \"DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u student)/bus bash /opt/schoolDaemon/ksetwallpaper.sh {config['wallpaper']}\"")
+                logger.info("Wallpaper not set, setting it")
+                system(
+                    f"su - student -c \"DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u student)/bus bash /opt/schoolDaemon/ksetwallpaper.sh {config['wallpaper']}\"")
+                modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
         await asyncio.sleep(60)

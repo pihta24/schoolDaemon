@@ -1,1 +1,1 @@
-@reboot root /opt/schUpdater/updater.py
+0 * * * * /opt/schUpdater/updater.py
