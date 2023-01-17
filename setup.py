@@ -9,6 +9,7 @@ def install():
     system("apt-get install xinput")
     system("python3 -m ensurepip")
     system("python3 -m pip install pycryptodome")
+    system("python3 -m pip install aiorun")
     copytree("./src", "/opt/schoolDaemon")
     system("chown -R root:root /opt/schoolDaemon")
     system("chmod -R 770 /opt/schoolDaemon")

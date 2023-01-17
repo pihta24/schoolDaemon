@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
-import signal
 import sys
 from json import load, dump
 from logging.handlers import RotatingFileHandler
@@ -10,6 +9,7 @@ from os import popen, system, environ
 from os.path import exists
 from time import time
 from typing import Optional
+from aiorun import run
 
 # noinspection PyPackageRequirements
 from Crypto.Hash import SHA256
@@ -171,15 +171,6 @@ tasks = dict()
 running = True
 
 
-def terminate(_: int, __):
-    global running
-    running = False
-    for task in tasks.values():
-        task.cancel()
-    loop.stop()
-    logger.info("SchoolDaemon stopped")
-
-
 async def handle_cancelled_tasks(coro, *args, **kwargs):
     try:
         await coro(*args, **kwargs)
@@ -201,32 +192,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    try:
-        signal.signal(signal.SIGTERM, terminate)
-    except AttributeError:
-        pass
-    
-    try:
-        signal.signal(signal.SIGINT, terminate)
-    except AttributeError:
-        pass
-    
-    try:
-        signal.signal(signal.SIGQUIT, terminate)
-    except AttributeError:
-        pass
-    
-    try:
-        signal.signal(signal.SIGHUP, terminate)
-    except AttributeError:
-        pass
-
-    asyncio.set_event_loop(loop)
-    
-    try:
-        loop.run_until_complete(main())
-        loop.run_forever()
-    except RuntimeError:
-        pass
-    
-    loop.close()
+    run(main(), loop=loop)

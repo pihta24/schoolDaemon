@@ -19,13 +19,11 @@ async def main(config):
                 continue
             if not exists(config["wallpaper"]):
                 continue
-            with open("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc", "r") as f:
-                data = f.read()
-                logger.info("Wallpaper not set, setting it")
-                copy2("/opt/schoolDaemon/ksetwallpaper.sh", "/home/student/.schd/ksetwallpaper.sh")
-                system("chmod ugo+rx /home/student/.schd/ksetwallpaper.sh")
-                system(
-                    f"su - student -c \"DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u student)/bus bash /home/student/.schd/ksetwallpaper.sh {config['wallpaper']}\"")
-                system("rm /home/student/.schd/ksetwallpaper.sh")
-                modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
+            logger.info("Wallpaper not set, setting it")
+            copy2("/opt/schoolDaemon/ksetwallpaper.sh", "/home/student/.schd/ksetwallpaper.sh")
+            system("chmod ugo+rx /home/student/.schd/ksetwallpaper.sh")
+            system(
+                f"su - student -c \"DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u student)/bus bash /home/student/.schd/ksetwallpaper.sh {config['wallpaper']}\"")
+            system("rm /home/student/.schd/ksetwallpaper.sh")
+            modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
         await asyncio.sleep(60)
