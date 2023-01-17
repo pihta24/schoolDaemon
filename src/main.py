@@ -89,9 +89,11 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             dump(config, f)
         if "wallpaper" in tasks.keys():
             tasks["wallpaper"].cancel()
+            from wallpaper_helper import main as wallpaper_helper
+            tasks["wallpaper"] = loop.create_task(handle_cancelled_tasks(wallpaper_helper, config))
         else:
             from wallpaper_helper import main as wallpaper_helper
-            tasks["wallpaper"] = loop.create_task(rerun_on_cacelled(wallpaper_helper, config))
+            tasks["wallpaper"] = loop.create_task(handle_cancelled_tasks(wallpaper_helper, config))
         return b"OK"
     elif command == b"wad":
         config["wallpaper_enabled"] = False
@@ -178,14 +180,11 @@ def terminate(_: int, __):
     logger.info("SchoolDaemon stopped")
 
 
-async def rerun_on_cacelled(coro, *args, **kwargs):
-    while True:
-        try:
-            await coro(*args, **kwargs)
-        except asyncio.CancelledError:
-            if not running:
-                break
-            await asyncio.sleep(1)
+async def handle_cancelled_tasks(coro, *args, **kwargs):
+    try:
+        await coro(*args, **kwargs)
+    except asyncio.CancelledError:
+        pass
 
 
 async def main():
@@ -198,7 +197,7 @@ async def main():
     
     if config.get("wallpaper_enabled", False) and "DEBUG" not in environ.keys():
         from wallpaper_helper import main as wallpaper_helper
-        tasks["wallpaper"] = loop.create_task(rerun_on_cacelled(wallpaper_helper, config))
+        tasks["wallpaper"] = loop.create_task(handle_cancelled_tasks(wallpaper_helper, config))
 
 
 if __name__ == "__main__":
