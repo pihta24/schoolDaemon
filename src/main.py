@@ -103,6 +103,18 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             tasks["wallpaper"].cancel()
             del tasks["wallpaper"]
         return b"OK"
+    elif command == b"scn":
+        if "screen_streamer_task" in tasks.keys():
+            if tasks["screen_streamer_task"].done():
+                del tasks["screen_streamer_task"]
+        if "screen_streamer_task" in tasks.keys():
+            stop_screen_streamer()
+        else:
+            if not other_data:
+                return
+            host, port = other_data.split(":")
+            start_screen_streamer(host, int(port))
+        return b"OK"
     
     if command not in commands.keys():
         logger.warning(f"Unknown command {command}, ignoring")
@@ -115,6 +127,17 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
         shell_command += other_data
     system(shell_command)
     return b"ok"
+
+
+def start_screen_streamer(host: str, port: int):
+    from screen_streamer import asyncio_task as screen_streamer_task
+    tasks["screen_streamer_task"] = asyncio.create_task(handle_cancelled_tasks(screen_streamer_task, host, port))
+
+
+def stop_screen_streamer():
+    if "screen_streamer_task" in tasks.keys():
+        tasks["screen_streamer_task"].cancel()
+        del tasks["screen_streamer_task"]
 
 
 class UDPServer(asyncio.DatagramProtocol):
@@ -168,7 +191,6 @@ class UDPServer(asyncio.DatagramProtocol):
 
 
 tasks = dict()
-running = True
 
 
 async def handle_cancelled_tasks(coro, *args, **kwargs):
@@ -179,7 +201,7 @@ async def handle_cancelled_tasks(coro, *args, **kwargs):
 
 
 async def main():
-    global tasks, running
+    global tasks
     
     _ = await loop.create_datagram_endpoint(
         UDPServer(),

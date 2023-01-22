@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 pycryptodome = "*"
 aiorun = "*"
+mss = "*"
 
 [dev-packages]
 
