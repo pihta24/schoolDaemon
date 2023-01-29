@@ -7,6 +7,9 @@ name = "pypi"
 pycryptodome = "*"
 aiorun = "*"
 mss = "*"
+requests = "*"
+python-socketio = {extras = ["asyncio_client"], version = "*"}
+pillow = "*"
 
 [dev-packages]
 

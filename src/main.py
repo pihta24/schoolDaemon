@@ -3,12 +3,14 @@
 import asyncio
 import logging
 import sys
+from asyncio import get_event_loop
 from json import load, dump
 from logging.handlers import RotatingFileHandler
 from os import popen, system, environ
 from os.path import exists
 from time import time
 from typing import Optional
+
 from aiorun import run
 
 # noinspection PyPackageRequirements
@@ -16,7 +18,7 @@ from Crypto.Hash import SHA256
 # noinspection PyPackageRequirements
 from Crypto.PublicKey import RSA
 # noinspection PyPackageRequirements
-from Crypto.Signature import pss
+from Crypto.Signature import PKCS1_PSS as pss
 
 from scripts.exec import commands
 
@@ -43,6 +45,8 @@ logging.basicConfig(
 
 logger = logging.getLogger("main")
 loop = asyncio.new_event_loop()
+rand_id = None
+last_stream = None
 
 with open(key_path, "r") as f:
     key = RSA.import_key(f.read())
@@ -60,7 +64,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
-    
+
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
@@ -69,19 +73,20 @@ sys.excepthook = handle_exception
 
 # noinspection PyShadowingNames
 def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
-    host = data[:16].rstrip(b"q")
-    command = data[16:19]
-    other_data = data[19:].decode("utf-8")
-    
+    global last_stream
+    host = data[:20].rstrip(b"q")
+    command = data[20:23]
+    other_data = data[23:].decode("utf-8")
+
     logger.debug(f"Command: {command} for {host} with data {other_data}")
-    
+
     if host.decode() not in machine_host:
         logger.info(f"Received command for {host}, but this is {machine_host}, ignoring")
         return
-    
+
     if command == b"wae":
         if not config.get("wallpaper", "") and not exists(other_data):
-            return
+            return b"ERR - File not found"
         if exists(other_data):
             config["wallpaper"] = other_data
         config["wallpaper_enabled"] = True
@@ -103,35 +108,40 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             tasks["wallpaper"].cancel()
             del tasks["wallpaper"]
         return b"OK"
-    elif command == b"scn":
+    elif command == b"son":
+        if not other_data:
+            return b"ERR - No data"
         if "screen_streamer_task" in tasks.keys():
             if tasks["screen_streamer_task"].done():
                 del tasks["screen_streamer_task"]
-        if "screen_streamer_task" in tasks.keys():
+        if "screen_streamer_task" in tasks.keys() and other_data == last_stream:
+            return b"Not needed, already streaming"
+        elif "screen_streamer_task" in tasks.keys():
             stop_screen_streamer()
-        else:
-            if not other_data:
-                return
-            host, port = other_data.split(":")
-            start_screen_streamer(host, int(port))
+        host, port = other_data.split(":")
+        start_screen_streamer(host, int(port), machine_host)
+        last_stream = other_data
         return b"OK"
-    
+    elif command == b"sof":
+        stop_screen_streamer()
+        return b"OK"
+
     if command not in commands.keys():
         logger.warning(f"Unknown command {command}, ignoring")
         return
-    
+
     shell_command = commands[command]
     logger.debug(f"Executing shell command {shell_command}")
-    
+
     if shell_command.endswith(" "):
         shell_command += other_data
     system(shell_command)
-    return b"ok"
+    return b"OK"
 
 
-def start_screen_streamer(host: str, port: int):
+def start_screen_streamer(host: str, port: int, computer: str):
     from screen_streamer import asyncio_task as screen_streamer_task
-    tasks["screen_streamer_task"] = asyncio.create_task(handle_cancelled_tasks(screen_streamer_task, host, port))
+    tasks["screen_streamer_task"] = asyncio.create_task(handle_cancelled_tasks(screen_streamer_task, host, port, computer))
 
 
 def stop_screen_streamer():
@@ -145,15 +155,17 @@ class UDPServer(asyncio.DatagramProtocol):
         self.transport = None
         self.machine_host = popen("hostname").read()
         self.last_id = None
-    
+
     def __call__(self, *args, **kwargs):
         return self
-    
+
     def connection_made(self, transport: asyncio.DatagramTransport):
         self.transport = transport
-    
+
     def datagram_received(self, data: bytes, addr: tuple):
+        global rand_id
         logger.info(f"Received data from {addr}")
+        # noinspection PyBroadException
         try:
             rand_id = data[:16]
             if self.last_id == rand_id:
@@ -161,26 +173,26 @@ class UDPServer(asyncio.DatagramProtocol):
                 return
             self.last_id = rand_id
             data = data[16:]
-        
+
             if len(data) <= 128:
                 logger.warning("Received data is too short")
                 return
-        
+
             calculated_hash = SHA256.new(data[128:])
             try:
                 verifier.verify(calculated_hash, data[:128])
             except (ValueError, TypeError):
                 logger.warning("Received data is not signed correctly")
                 return
-        
+
             data = data[128:]
-        
+
             if time() - int.from_bytes(data[:5], "big") > 5:
                 logger.warning("Received data is too old")
                 return
-        
+
             data = data[5:]
-        
+
             logger.debug("Executing command")
             result = exec_script(data, self.machine_host)
             if result:
@@ -202,16 +214,16 @@ async def handle_cancelled_tasks(coro, *args, **kwargs):
 
 async def main():
     global tasks
-    
+
     _ = await loop.create_datagram_endpoint(
         UDPServer(),
         local_addr=("0.0.0.0", 55555)
     )
-    
+
     if config.get("wallpaper_enabled", False) and "DEBUG" not in environ.keys():
         from wallpaper_helper import main as wallpaper_helper
         tasks["wallpaper"] = loop.create_task(handle_cancelled_tasks(wallpaper_helper, config))
 
 
 if __name__ == "__main__":
-    run(main(), loop=loop)
+    run(main(), loop=loop, timeout_task_shutdown=5)

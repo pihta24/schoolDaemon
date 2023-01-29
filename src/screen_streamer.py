@@ -1,33 +1,53 @@
 import asyncio
-from queue import Empty
+import io
+
+import socketio
+from requests import get
+from PIL import Image
 from mss.linux import MSS
-from mss import mss as sct
+from base64 import b64encode
 import logging
-from mss.tools import to_png
 
 
 logger = logging.getLogger("screen-streamer")
+stream_on = True
 
 
-async def asyncio_task(host: str, port: int):
+async def asyncio_task(host: str, port: int, machine_host: str):
+    global stream_on
+    stream_on = True
     logger.info("Starting screen streamer asyncio task")
-    reader, writer = await asyncio.open_connection(host, port)
-    logger.info("Connected to server")
-    logger.info("Starting screen streamer")
-    # with MSS(":0") as mss:
-    with sct() as mss:
-        while True:
+    get(f"http://{host}:{port}/api/socket").close()
+    sio = socketio.AsyncClient()
+    await sio.connect(f"http://{host}:{port}/", wait_timeout=60)
+    await sio.emit("setType", "daemon")
+
+    @sio.on("stream_off")
+    async def stream_off(data):
+        global stream_on
+        if data in machine_host:
+            stream_on = False
+            await sio.disconnect()
+
+    with MSS(":0") as mss:
+        last_image = None
+        while sio.connected and stream_on:
             try:
                 img = mss.grab(mss.monitors[1])
-                img = to_png(img.rgb, img.size)
-                writer.write(img + b"EOFEOFEOF")
-                await writer.drain()
-                await asyncio.sleep(1 / 10)
+                image = Image.frombytes("RGB", img.size, img.bgra, "raw", "BGRX")
+                image = image.resize((int(image.width / 3), int(image.height / 3)), Image.ANTIALIAS)
+                img_b = io.BytesIO()
+                image.save(img_b, format="JPEG", quality=80, optimize=True)
+                img = "data:image/jpeg;base64," + b64encode(img_b.getvalue()).decode('utf-8')
+                if img != last_image:
+                    await sio.emit("image", {"image": img, "hostname": machine_host})
+                    last_image = img
+                await sio.sleep(1 / 10)
             except ConnectionResetError:
                 logger.info("Connection reset by peer")
                 break
             except Exception:
                 logger.exception("Error while streaming screen")
-                writer.close()
-                raise
+                break
+        await sio.disconnect()
     logger.info("Stopping screen streamer")
