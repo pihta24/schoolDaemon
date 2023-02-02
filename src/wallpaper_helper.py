@@ -14,12 +14,19 @@ async def main(config):
         if getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc") != modified:
             modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
             if "wallpaper" not in config.keys():
+                await asyncio.sleep(60)
                 continue
             if not config["wallpaper_enabled"]:
+                await asyncio.sleep(60)
                 continue
             if not exists(config["wallpaper"]):
+                await asyncio.sleep(60)
                 continue
             logger.info("Wallpaper not set, setting it")
+            if not exists("/home/student/.schd"):
+                system("mkdir -p /home/student/.schd")
+                system("chown student:student /home/student/.schd")
+                system("chmod 766 /home/student/.schd")
             copy2("/opt/schoolDaemon/ksetwallpaper.sh", "/home/student/.schd/ksetwallpaper.sh")
             system("chmod ugo+rx /home/student/.schd/ksetwallpaper.sh")
             system(

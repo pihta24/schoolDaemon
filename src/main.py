@@ -134,7 +134,7 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
     logger.debug(f"Executing shell command {shell_command}")
 
     if shell_command.endswith(" "):
-        shell_command += other_data
+        shell_command += '"' + other_data + '"'
     system(shell_command)
     return b"OK"
 

@@ -1,13 +1,11 @@
-import asyncio
 import io
+import logging
+from base64 import b64encode
 
 import socketio
-from requests import get
 from PIL import Image
-from mss.linux import MSS
-from base64 import b64encode
-import logging
-
+from mss import mss
+from requests import get
 
 logger = logging.getLogger("screen-streamer")
 stream_on = True
@@ -29,11 +27,11 @@ async def asyncio_task(host: str, port: int, machine_host: str):
             stream_on = False
             await sio.disconnect()
 
-    with MSS(":0") as mss:
+    with mss(display=":0") as stc:
         last_image = None
         while sio.connected and stream_on:
             try:
-                img = mss.grab(mss.monitors[1])
+                img = stc.grab(stc.monitors[1])
                 image = Image.frombytes("RGB", img.size, img.bgra, "raw", "BGRX")
                 image = image.resize((int(image.width / 3), int(image.height / 3)), Image.ANTIALIAS)
                 img_b = io.BytesIO()
