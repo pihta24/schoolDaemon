@@ -1,0 +1,13 @@
+[Unit]
+Description=School Daemon Updater Service
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/schUpdater
+Type=simple
+Restart=always
+User=root
+ExecStart=/opt/schUpdater/updater.py
+
+[Install]
+WantedBy=multi-user.target
