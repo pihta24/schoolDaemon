@@ -117,7 +117,7 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             if tasks["screen_streamer_task"].done():
                 del tasks["screen_streamer_task"]
         if "screen_streamer_task" in tasks.keys() and other_data == last_stream:
-            await streamer_queue.put(b"OK")
+            loop.create_task(streamer_queue.put(b"OK"))
             return b"Not needed, already streaming"
         elif "screen_streamer_task" in tasks.keys():
             stop_screen_streamer()
