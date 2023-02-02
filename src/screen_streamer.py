@@ -6,12 +6,13 @@ import socketio
 from PIL import Image
 from mss import mss
 from requests import get
+from asyncio.queues import Queue
 
 logger = logging.getLogger("screen-streamer")
 stream_on = True
 
 
-async def asyncio_task(host: str, port: int, machine_host: str):
+async def asyncio_task(host: str, port: int, machine_host: str, queue: Queue):
     global stream_on
     stream_on = True
     logger.info("Starting screen streamer asyncio task")
@@ -37,7 +38,9 @@ async def asyncio_task(host: str, port: int, machine_host: str):
                 img_b = io.BytesIO()
                 image.save(img_b, format="JPEG", quality=80, optimize=True)
                 img = "data:image/jpeg;base64," + b64encode(img_b.getvalue()).decode('utf-8')
-                if img != last_image:
+                if img != last_image or not queue.empty():
+                    if not queue.empty():
+                        queue.get_nowait()
                     await sio.emit("image", {"image": img, "hostname": machine_host})
                     last_image = img
                 await sio.sleep(1 / 10)

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import sys
-from asyncio import get_event_loop
+from asyncio.queues import Queue
 from json import load, dump
 from logging.handlers import RotatingFileHandler
 from os import popen, system, environ
@@ -47,6 +47,8 @@ logger = logging.getLogger("main")
 loop = asyncio.new_event_loop()
 rand_id = None
 last_stream = None
+streamer_queue = Queue()
+
 
 with open(key_path, "r") as f:
     key = RSA.import_key(f.read())
@@ -115,6 +117,7 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             if tasks["screen_streamer_task"].done():
                 del tasks["screen_streamer_task"]
         if "screen_streamer_task" in tasks.keys() and other_data == last_stream:
+            await streamer_queue.put(b"OK")
             return b"Not needed, already streaming"
         elif "screen_streamer_task" in tasks.keys():
             stop_screen_streamer()
@@ -141,7 +144,7 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
 
 def start_screen_streamer(host: str, port: int, computer: str):
     from screen_streamer import asyncio_task as screen_streamer_task
-    tasks["screen_streamer_task"] = asyncio.create_task(handle_cancelled_tasks(screen_streamer_task, host, port, computer))
+    tasks["screen_streamer_task"] = asyncio.create_task(handle_cancelled_tasks(screen_streamer_task, host, port, computer, streamer_queue))
 
 
 def stop_screen_streamer():
