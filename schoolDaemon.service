@@ -7,6 +7,8 @@ WorkingDirectory=/opt/schoolDaemon
 Type=simple
 Restart=always
 User=root
+Environment=XAUTHORITY=/home/student/.Xauthority
+Environment=DISPLAY=:0
 ExecStart=/opt/schoolDaemon/main.py
 
 [Install]
