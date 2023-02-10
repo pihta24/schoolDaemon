@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from os import system
+from os import system, popen
 from os.path import getmtime, exists
 from shutil import copy2
 
@@ -10,6 +10,9 @@ logger = logging.getLogger("wallpaper-helper")
 async def main(config):
     modified = None
     logger.info("Starting wallpaper daemon")
+
+    if "664" not in popen("stat -c %a /home/student/.config/plasma-org.kde.plasma.desktop-appletsrc").read():
+        system("chmod /home/student/.config/plasma-org.kde.plasma.desktop-appletsrc 664")
     while True:
         if getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc") != modified:
             modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
