@@ -13,7 +13,7 @@ async def main(config):
 
     while True:
         if "664" not in popen("stat -c %a /home/student/.config/plasma-org.kde.plasma.desktop-appletsrc").read():
-            system("chmod /home/student/.config/plasma-org.kde.plasma.desktop-appletsrc 664")
+            system("chmod 664 /home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
         if getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc") != modified:
             modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
             if "wallpaper" not in config.keys():
