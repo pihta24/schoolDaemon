@@ -12,9 +12,11 @@ async def main(config):
     logger.info("Starting wallpaper daemon")
 
     while True:
+        wrong_permissions = False
         if "664" not in popen("stat -c %a /home/student/.config/plasma-org.kde.plasma.desktop-appletsrc").read():
             system("chmod 664 /home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
-        if getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc") != modified:
+            wrong_permissions = True
+        if getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc") != modified or wrong_permissions:
             modified = getmtime("/home/student/.config/plasma-org.kde.plasma.desktop-appletsrc")
             if "wallpaper" not in config.keys():
                 await asyncio.sleep(60)
