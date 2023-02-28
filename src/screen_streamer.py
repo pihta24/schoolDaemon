@@ -34,9 +34,9 @@ async def asyncio_task(host: str, port: int, machine_host: str, queue: Queue):
             try:
                 img = stc.grab(stc.monitors[1])
                 image = Image.frombytes("RGB", img.size, img.bgra, "raw", "BGRX")
-                image = image.resize((int(image.width / 2), int(image.height / 2)), Image.ANTIALIAS)
+                image = image.resize((int(image.width / 3), int(image.height / 3)), Image.ANTIALIAS)
                 img_b = io.BytesIO()
-                image.save(img_b, format="JPEG", quality=75, optimize=True)
+                image.save(img_b, format="JPEG", quality=85, optimize=True)
                 img = "data:image/jpeg;base64," + b64encode(img_b.getvalue()).decode('utf-8')
                 if img != last_image or not queue.empty():
                     if not queue.empty():
