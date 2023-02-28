@@ -13,5 +13,5 @@ commands = {
     b"los": "loginctl terminate-user student",
     b"pip": "python3 -m ensurepip",
     b"est": "chmod o+x /usr/lib/kf5/bin/systemsettings",
-    b"dst": "chmod o-x /usr/lib/kf5/bin/systemsettings"
+    b"dst": "chown :wheel /usr/lib/kf5/bin/systemsettings && chmod o-x /usr/lib/kf5/bin/systemsettings"
 }
