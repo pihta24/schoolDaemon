@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
+import socket
 import sys
 from asyncio.queues import Queue
 from json import load, dump
@@ -10,6 +11,7 @@ from os import popen, system, environ
 from os.path import exists
 from time import time
 from typing import Optional
+from requests import post
 
 from aiorun import run
 
@@ -76,13 +78,13 @@ sys.excepthook = handle_exception
 # noinspection PyShadowingNames
 def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
     global last_stream
-    host = data[:20].rstrip(b"q")
+    host = data[:20].rstrip(b"q").decode()
     command = data[20:23]
     other_data = data[23:].decode("utf-8")
 
     logger.debug(f"Command: {command} for {host} with data {other_data}")
 
-    if host.decode() not in machine_host:
+    if not machine_host.rstrip("\n").rstrip().endswith(host):
         logger.info(f"Received command for {host}, but this is {machine_host}, ignoring")
         return
 
@@ -127,6 +129,16 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
         return b"OK"
     elif command == b"sof":
         stop_screen_streamer()
+        return b"OK"
+    elif command == "sip":
+        if not other_data:
+            return b"ERR - No data"
+        address, secret = other_data.split()
+        post(f"http://{address}/api/ip", json={
+            "hostname": "-".join(machine_host.rstrip("\n").rstrip().split("-")[-3:]),
+            "ip": ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1])[0],
+            "secret": secret
+        }).close()
         return b"OK"
 
     if command not in commands.keys():
