@@ -84,7 +84,19 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
 
     logger.debug(f"Command: {command} for {host} with data {other_data}")
 
-    if not machine_host.rstrip("\n").rstrip().endswith(host):
+    host_len = len(host.split("-"))
+
+    if host_len == 3:
+        machine_host_part = machine_host.rstrip("\n").rstrip()
+    elif host_len == 2:
+        machine_host_part = "-".join(machine_host.rstrip("\n").rstrip().split("-")[:-1])
+    elif host_len == 1:
+        machine_host_part = "-".join(machine_host.rstrip("\n").rstrip().split("-")[:-2])
+    else:
+        logger.warning("Received malformed hostname")
+        return
+
+    if not machine_host_part.endswith(host):
         logger.info(f"Received command for {host}, but this is {machine_host}, ignoring")
         return
 
