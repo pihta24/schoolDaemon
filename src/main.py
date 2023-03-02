@@ -124,6 +124,20 @@ def exec_script(data: bytes, machine_host: str) -> Optional[bytes]:
             tasks["wallpaper"].cancel()
             del tasks["wallpaper"]
         return b"OK"
+    elif command == b"dwa":
+        if len(other_data.split()) != 2:
+            return
+
+        remote_path, local_folder = other_data.split()
+        remote_zip = remote_path.split("/")[-1]
+
+        system(f"wget {remote_path} && "
+               f"unzip {remote_zip} -d {remote_zip.replace('.zip', '')} && "
+               f"mkdir /usr/share/wallpapers/{local_folder} && "
+               f"cp -r -f {remote_zip.replace('.zip', '')}/. /usr/share/wallpapers/{local_folder} && "
+               f"rm -rf {remote_zip.replace('.zip', '')} && "
+               f"rm -f {remote_zip}")
+        return b"OK"
     elif command == b"son":
         if not other_data:
             return b"ERR - No data"
