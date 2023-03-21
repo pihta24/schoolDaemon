@@ -265,6 +265,9 @@ async def main():
         from wallpaper_helper import main as wallpaper_helper
         tasks["wallpaper"] = loop.create_task(handle_cancelled_tasks(wallpaper_helper, config))
 
+    if config.get("wol", True) and "DEBUG" not in environ.keys():
+        system("apt-get install ethtool -y && ethtool -s enp2s0 wol g")
+
 
 if __name__ == "__main__":
     run(main(), loop=loop, timeout_task_shutdown=5)
